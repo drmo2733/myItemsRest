@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @RestController
@@ -36,9 +37,11 @@ public class UserController {
         return result;
     }
 
-    
+
     @PostMapping("/users/")
-    public UserResponseDto saveUser(@RequestBody SaveUserRequest saveUserRequest) {
+    public @ResponseBody
+    UserResponseDto saveUser(@RequestBody SaveUserRequest saveUserRequest,
+                             @RequestHeader("platform") String platform) {
         User user = modelMapper.map(saveUserRequest, User.class);
         user.setRole(Role.USER);
         user.setActive(false);
@@ -49,16 +52,41 @@ public class UserController {
     }
 
 
+    @PutMapping("/users/{id}")
+    public ResponseEntity <UserResponseDto> updateUser(@RequestBody SaveUserRequest saveUserRequest,
+                                      @PathVariable("id") int id) {
+        Optional<User> user = userRepository.findById(id);
+        if (!user.isPresent()){
+            return ResponseEntity.notFound().build();
+        }
+        User byId = user.get();
+        if (saveUserRequest.getEmail() != null) {
+            byId.setEmail(saveUserRequest.getEmail());
+        }
+        if (saveUserRequest.getName() != null) {
+            byId.setName(saveUserRequest.getName());
+        }
+        if (saveUserRequest.getSurname() != null) {
+            byId.setSurname(saveUserRequest.getSurname());
+        }
+        if (saveUserRequest.getPassword() != null) {
+            byId.setPassword(saveUserRequest.getPassword());
+        }
+        userRepository.save(byId);
+        UserResponseDto userResponseDto = modelMapper.map(byId, UserResponseDto.class);
+        return ResponseEntity.ok(userResponseDto);
+    }
+
+
     @DeleteMapping("/users/{id}")
     public ResponseEntity deleteById(@PathVariable("id") int id) {
         if (userRepository.existsById(id)) {
             userRepository.deleteById(id);
             return ResponseEntity.noContent().build();
-        }else{
+        } else {
             return ResponseEntity.notFound().build();
         }
     }
-
 
 
 }
